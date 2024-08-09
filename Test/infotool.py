@@ -9,32 +9,6 @@ import sys
 
 logging.basicConfig(level=logging.INFO)
 
-def get_ip_address(url):
-    try:
-        ip_address = socket.gethostbyname(url)
-        return ip_address
-    except socket.gaierror:
-        logging.error(f"Error: Could not resolve {url}")
-        return None
-
-def get_host_from_ip(ip_address):
-    try:
-        host = socket.gethostbyaddr(ip_address)
-        return host[0]  # Return the primary domain name associated with the IP
-    except socket.herror:
-        logging.error(f"Error: Could not resolve IP address {ip_address}")
-        return None
-
-def get_location_info(ip_address):
-    url = f"https://ipinfo.io/{ip_address}/json"
-    try:
-        response = requests.get(url)
-        data = response.json()
-        return data
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error fetching data: {e}")
-        return None
-
 def run_command(command):
     try:
         logging.debug(f"Running command: {' '.join(command)}")
@@ -69,49 +43,73 @@ def whatweb_scan(target):
     run_command(["whatweb", target])
     logging.info(f"WhatWeb scan completed on {target}")
 
-def ip2location_lookup():
+def ip2location_lookup(ip_address):
     logging.info("Using IP2Location for IP geolocation")
-   
+    url = f"https://ipinfo.io/{ip_address}/json"
+    try:
+        response = requests.get(url)
+        data = response.json()
+        if data:
+            print(json.dumps(data, indent=4))
+        else:
+            logging.info("No location information found for the IP address.")
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error fetching data: {e}")
     logging.info("IP2Location lookup completed")
 
-def virustotal_scan():
+def virustotal_scan(api_key, target):
     logging.info("Scanning with VirusTotal")
-   
+    url = "https://www.virustotal.com/api/v3/files"
+    headers = {
+        "x-apikey": api_key
+    }
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            data = response.json()
+            print(json.dumps(data, indent=4))
+        else:
+            logging.error(f"Error fetching data: {response.status_code}")
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error fetching data: {e}")
     logging.info("VirusTotal scan completed")
 
 def wayback_machine():
     logging.info("Using Wayback Machine for archived pages")
- 
+    # Implement Wayback Machine logic here
     logging.info("Wayback Machine search completed")
 
 def hunter_io():
     logging.info("Using Hunter.io to find email addresses")
-   
+    # Implement Hunter.io logic here
     logging.info("Hunter.io search completed")
 
 def mxtoolbox_lookup():
     logging.info("Using MXToolbox for DNS and domain analysis")
-    
+    # Implement MXToolbox logic here
     logging.info("MXToolbox lookup completed")
 
 def spiderfoot():
     logging.info("Installing and running SpiderFoot")
-      
+    # Implement SpiderFoot logic here
     logging.info("SpiderFoot completed")
 
 def foca():
     logging.info("Installing and running FOCA")
-   
+    # Implement FOCA logic here
     logging.info("FOCA completed")
 
 def google_dorking():
     logging.info("Performing Google Dorking")
-    
+    # Implement Google Dorking logic here
     logging.info("Google Dorking completed")
 
 def exiftool_scan(target):
     logging.info(f"Starting ExifTool scan on {target}")
-    run_command(["exiftool", target])
+    if os.path.isfile(target):
+        run_command(["exiftool", target])
+    else:
+        logging.error(f"File not found: {target}")
     logging.info(f"ExifTool scan completed on {target}")
 
 def sublist3r_scan(target):
@@ -124,13 +122,29 @@ def amass_enum(target):
     run_command(["amass", "enum", "-d", target])
     logging.info(f"Amass enumeration completed on {target}")
 
+def get_ip_address(url):
+    try:
+        ip_address = socket.gethostbyname(url)
+        return ip_address
+    except socket.gaierror:
+        logging.error(f"Error: Could not resolve {url}")
+        return None
+
+def get_location_info(ip_address):
+    url = f"https://ipinfo.io/{ip_address}/json"
+    try:
+        response = requests.get(url)
+        data = response.json()
+        return data
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error fetching data: {e}")
+        return None
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Advanced Information Gathering Tool")
-    
     parser.add_argument('-t', '--target', type=str, required=True, help='Target domain or IP address')
-    parser.add_argument('-e', '--engine', type=str, help='Search engine for The Harvester (e.g., google)')
-    parser.add_argument('--shodan-api-key', type=str, help='API key for Shodan search')
-
+    parser.add_argument('--shodan-api-key', type=str, default="6NqA14sMLc3L3D1OQlWZCEzrsSN0QTWV", help='API key for Shodan search')
+    parser.add_argument('--virustotal-api-key', type=str, help='API key for VirusTotal scan')
     parser.add_argument('--nmap', action='store_true', help='Run Nmap scan')
     parser.add_argument('--whois', action='store_true', help='Run WHOIS lookup')
     parser.add_argument('--shodan', action='store_true', help='Run Shodan search')
@@ -146,9 +160,7 @@ def parse_arguments():
     parser.add_argument('--exiftool', action='store_true', help='Run ExifTool')
     parser.add_argument('--sublist3r', action='store_true', help='Run Sublist3r')
     parser.add_argument('--amass', action='store_true', help='Run Amass enumeration')
-    
     parser.add_argument('--all', action='store_true', help='Run all scans and information-gathering tools')
-    
     return parser.parse_args()
 
 def main():
@@ -158,26 +170,16 @@ def main():
         logging.error("This script requires root privileges. Please run as root.")
         return
 
-    # Run IP and location gathering first
-    if not args.target:
-        logging.error("No target provided.")
-        return
-    
-    ip_address = get_ip_address(args.target)
-    
-    if ip_address:
-        location_info = get_location_info(ip_address)
-        if location_info:
-            logging.info(json.dumps(location_info, indent=4))
-        
-        # If the target is an IP address, perform reverse lookup
-        if args.target.replace('.', '').isdigit():  # Check if it's an IP address
-            host = get_host_from_ip(ip_address)
-            if host:
-                logging.info(f"Reverse lookup result: {host}")
-            else:
-                logging.info("No host information found for the IP address.")
-    
+    ip_address = None
+    if not args.target.startswith('http'):
+        ip_address = get_ip_address(args.target)
+        if ip_address:
+            location_info = get_location_info(ip_address)
+            if location_info:
+                print(json.dumps(location_info, indent=4))
+        else:
+            logging.info("No host information found for the IP address.")
+
     if args.all:
         args.whois = True
         args.shodan = True
@@ -204,10 +206,10 @@ def main():
         shodan_search(args.target, args.shodan_api_key)
 
     if args.ip2location:
-        ip2location_lookup()
+        ip2location_lookup(ip_address)
 
     if args.virustotal:
-        virustotal_scan()
+        virustotal_scan(args.virustotal_api_key, args.target)
 
     if args.wayback:
         wayback_machine()

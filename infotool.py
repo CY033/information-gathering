@@ -4,8 +4,14 @@ import logging
 import os
 import requests
 import json
+import socket
+import sys
 
 logging.basicConfig(level=logging.INFO)
+
+ 
+SHODAN_API_KEYS = ["6NqA14sMLc3L3D1OQlWZCEzrsSN0QTWV"]
+VIRUSTOTAL_API_KEYS = ["591e91fc74b9f00acfde7ffd5e1d2152bbe9342bd5bd65777f7cc4d18ff32702"]  
 
 def run_command(command):
     try:
@@ -41,44 +47,59 @@ def whatweb_scan(target):
     run_command(["whatweb", target])
     logging.info(f"WhatWeb scan completed on {target}")
 
-def ip2location_lookup():
+def ip2location_lookup(ip_address):
     logging.info("Using IP2Location for IP geolocation")
    
     logging.info("IP2Location lookup completed")
 
-def virustotal_scan():
+def virustotal_scan(api_key, target):
     logging.info("Scanning with VirusTotal")
-   
+    if api_key:
+        url = f"https://www.virustotal.com/api/v3/files/{target}"
+        headers = {
+            "x-apikey": api_key
+        }
+        try:
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                print(json.dumps(data, indent=4))
+            else:
+                logging.error(f"VirusTotal API returned status code {response.status_code}")
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Error fetching data from VirusTotal: {e}")
+    else:
+        logging.error("API key for VirusTotal is required")
     logging.info("VirusTotal scan completed")
 
 def wayback_machine():
     logging.info("Using Wayback Machine for archived pages")
- 
+     
     logging.info("Wayback Machine search completed")
 
 def hunter_io():
     logging.info("Using Hunter.io to find email addresses")
-   
+    
     logging.info("Hunter.io search completed")
 
 def mxtoolbox_lookup():
     logging.info("Using MXToolbox for DNS and domain analysis")
-    
+ 
     logging.info("MXToolbox lookup completed")
 
 def spiderfoot():
     logging.info("Installing and running SpiderFoot")
-      
+    
     logging.info("SpiderFoot completed")
 
 def foca():
     logging.info("Installing and running FOCA")
-   
+  
     logging.info("FOCA completed")
 
 def google_dorking():
     logging.info("Performing Google Dorking")
-    
+ 
     logging.info("Google Dorking completed")
 
 def exiftool_scan(target):
@@ -96,13 +117,33 @@ def amass_enum(target):
     run_command(["amass", "enum", "-d", target])
     logging.info(f"Amass enumeration completed on {target}")
 
+def get_ip_address(url):
+    try:
+        ip_address = socket.gethostbyname(url)
+        return ip_address
+    except socket.gaierror:
+        logging.error(f"Error: Could not resolve {url}")
+        return None
+
+def get_location_info(ip_address):
+    url = f"https://ipinfo.io/{ip_address}/json"
+    try:
+        response = requests.get(url)
+        data = response.json()
+        return data
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error fetching data: {e}")
+        return None
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Advanced Information Gathering Tool")
-    
+
     parser.add_argument('-t', '--target', type=str, required=True, help='Target domain or IP address')
     parser.add_argument('-e', '--engine', type=str, help='Search engine for The Harvester (e.g., google)')
-    parser.add_argument('--shodan-api-key', type=str, help='API key for Shodan search')
-
+    
+    parser.add_argument('--shodan-api-keys', type=str, nargs='+', default=SHODAN_API_KEYS, help='API keys for Shodan search (space-separated)')
+    parser.add_argument('--virustotal-api-keys', type=str, nargs='+', default=VIRUSTOTAL_API_KEYS, help='API keys for VirusTotal scan (space-separated)')
+    
     parser.add_argument('--nmap', action='store_true', help='Run Nmap scan')
     parser.add_argument('--whois', action='store_true', help='Run WHOIS lookup')
     parser.add_argument('--shodan', action='store_true', help='Run Shodan search')
@@ -118,20 +159,28 @@ def parse_arguments():
     parser.add_argument('--exiftool', action='store_true', help='Run ExifTool')
     parser.add_argument('--sublist3r', action='store_true', help='Run Sublist3r')
     parser.add_argument('--amass', action='store_true', help='Run Amass enumeration')
-    
+
     parser.add_argument('--all', action='store_true', help='Run all scans and information-gathering tools')
-    
+
     return parser.parse_args()
 
 def main():
     args = parse_arguments()
 
-    
     if os.geteuid() != 0:
         logging.error("This script requires root privileges. Please run as root.")
         return
 
-    
+    ip_address = None
+    if not args.target.startswith('http'):
+        ip_address = get_ip_address(args.target)
+        if ip_address:
+            location_info = get_location_info(ip_address)
+            if location_info:
+                print(json.dumps(location_info, indent=4))
+        else:
+            logging.info("No host information found for the IP address.")
+
     if args.all:
         args.whois = True
         args.shodan = True
@@ -148,50 +197,58 @@ def main():
         args.sublist3r = True
         args.amass = True
 
-    if args.nmap:
-        nmap_scan(args.target)
+    try:
+        if args.nmap:
+            nmap_scan(args.target)
 
-    if args.whois:
-        whois_lookup(args.target)
+        if args.whois:
+            whois_lookup(args.target)
 
-    if args.shodan:
-        shodan_search(args.target, args.shodan_api_key)
+        if args.shodan:
+            for api_key in args.shodan_api_keys:
+                shodan_search(args.target, api_key)
 
-    if args.ip2location:
-        ip2location_lookup()
+        if args.ip2location:
+            ip2location_lookup(ip_address)
 
-    if args.virustotal:
-        virustotal_scan()
+        if args.virustotal:
+            for api_key in args.virustotal_api_keys:
+                virustotal_scan(api_key, args.target)
 
-    if args.wayback:
-        wayback_machine()
+        if args.wayback:
+            wayback_machine()
 
-    if args.hunter:
-        hunter_io()
+        if args.hunter:
+            hunter_io()
 
-    if args.mxtoolbox:
-        mxtoolbox_lookup()
+        if args.mxtoolbox:
+            mxtoolbox_lookup()
 
-    if args.whatweb:
-        whatweb_scan(args.target)
+        if args.whatweb:
+            whatweb_scan(args.target)
 
-    if args.spiderfoot:
-        spiderfoot()
+        if args.spiderfoot:
+            spiderfoot()
 
-    if args.foca:
-        foca()
+        if args.foca:
+            foca()
 
-    if args.google_dorking:
-        google_dorking()
+        if args.google_dorking:
+            google_dorking()
 
-    if args.exiftool:
-        exiftool_scan(args.target)
+        if args.exiftool:
+            exiftool_scan(args.target)
 
-    if args.sublist3r:
-        sublist3r_scan(args.target)
+        if args.sublist3r:
+            sublist3r_scan(args.target)
 
-    if args.amass:
-        amass_enum(args.target)
+        if args.amass:
+            amass_enum(args.target)
+
+    except KeyboardInterrupt:
+        logging.info("Process interrupted by user.")
+    except Exception as e:
+        logging.error(f"An unexpected error occurred: {e}")
 
 if __name__ == "__main__":
     main()

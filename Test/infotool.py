@@ -45,71 +45,62 @@ def whatweb_scan(target):
 
 def ip2location_lookup(ip_address):
     logging.info("Using IP2Location for IP geolocation")
-    url = f"https://ipinfo.io/{ip_address}/json"
-    try:
-        response = requests.get(url)
-        data = response.json()
-        if data:
-            print(json.dumps(data, indent=4))
-        else:
-            logging.info("No location information found for the IP address.")
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error fetching data: {e}")
+   
     logging.info("IP2Location lookup completed")
 
 def virustotal_scan(api_key, target):
     logging.info("Scanning with VirusTotal")
-    url = "https://www.virustotal.com/api/v3/files"
-    headers = {
-        "x-apikey": api_key
-    }
-    try:
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            data = response.json()
-            print(json.dumps(data, indent=4))
-        else:
-            logging.error(f"Error fetching data: {response.status_code}")
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error fetching data: {e}")
+    if api_key:
+        url = f"https://www.virustotal.com/api/v3/files/{target}"
+        headers = {
+            "x-apikey": api_key
+        }
+        try:
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                print(json.dumps(data, indent=4))
+            else:
+                logging.error(f"VirusTotal API returned status code {response.status_code}")
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Error fetching data from VirusTotal: {e}")
+    else:
+        logging.error("API key for VirusTotal is required")
     logging.info("VirusTotal scan completed")
 
 def wayback_machine():
     logging.info("Using Wayback Machine for archived pages")
-    # Implement Wayback Machine logic here
+   
     logging.info("Wayback Machine search completed")
 
 def hunter_io():
     logging.info("Using Hunter.io to find email addresses")
-    # Implement Hunter.io logic here
+    
     logging.info("Hunter.io search completed")
 
 def mxtoolbox_lookup():
     logging.info("Using MXToolbox for DNS and domain analysis")
-    # Implement MXToolbox logic here
+   
     logging.info("MXToolbox lookup completed")
 
 def spiderfoot():
     logging.info("Installing and running SpiderFoot")
-    # Implement SpiderFoot logic here
+   
     logging.info("SpiderFoot completed")
 
 def foca():
     logging.info("Installing and running FOCA")
-    # Implement FOCA logic here
+   
     logging.info("FOCA completed")
 
 def google_dorking():
     logging.info("Performing Google Dorking")
-    # Implement Google Dorking logic here
+  
     logging.info("Google Dorking completed")
 
 def exiftool_scan(target):
     logging.info(f"Starting ExifTool scan on {target}")
-    if os.path.isfile(target):
-        run_command(["exiftool", target])
-    else:
-        logging.error(f"File not found: {target}")
+    run_command(["exiftool", target])
     logging.info(f"ExifTool scan completed on {target}")
 
 def sublist3r_scan(target):
@@ -142,9 +133,12 @@ def get_location_info(ip_address):
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Advanced Information Gathering Tool")
+
     parser.add_argument('-t', '--target', type=str, required=True, help='Target domain or IP address')
-    parser.add_argument('--shodan-api-key', type=str, default="6NqA14sMLc3L3D1OQlWZCEzrsSN0QTWV", help='API key for Shodan search')
+    parser.add_argument('-e', '--engine', type=str, help='Search engine for The Harvester (e.g., google)')
+    parser.add_argument('--shodan-api-key', type=str, help='API key for Shodan search')
     parser.add_argument('--virustotal-api-key', type=str, help='API key for VirusTotal scan')
+
     parser.add_argument('--nmap', action='store_true', help='Run Nmap scan')
     parser.add_argument('--whois', action='store_true', help='Run WHOIS lookup')
     parser.add_argument('--shodan', action='store_true', help='Run Shodan search')
@@ -160,7 +154,9 @@ def parse_arguments():
     parser.add_argument('--exiftool', action='store_true', help='Run ExifTool')
     parser.add_argument('--sublist3r', action='store_true', help='Run Sublist3r')
     parser.add_argument('--amass', action='store_true', help='Run Amass enumeration')
+
     parser.add_argument('--all', action='store_true', help='Run all scans and information-gathering tools')
+
     return parser.parse_args()
 
 def main():
@@ -196,50 +192,55 @@ def main():
         args.sublist3r = True
         args.amass = True
 
-    if args.nmap:
-        nmap_scan(args.target)
+    try:
+        if args.nmap:
+            nmap_scan(args.target)
 
-    if args.whois:
-        whois_lookup(args.target)
+        if args.whois:
+            whois_lookup(args.target)
 
-    if args.shodan:
-        shodan_search(args.target, args.shodan_api_key)
+        if args.shodan:
+            shodan_search(args.target, args.shodan_api_key)
 
-    if args.ip2location:
-        ip2location_lookup(ip_address)
+        if args.ip2location:
+            ip2location_lookup(ip_address)
 
-    if args.virustotal:
-        virustotal_scan(args.virustotal_api_key, args.target)
+        if args.virustotal:
+            virustotal_scan(args.virustotal_api_key, args.target)
 
-    if args.wayback:
-        wayback_machine()
+        if args.wayback:
+            wayback_machine()
 
-    if args.hunter:
-        hunter_io()
+        if args.hunter:
+            hunter_io()
 
-    if args.mxtoolbox:
-        mxtoolbox_lookup()
+        if args.mxtoolbox:
+            mxtoolbox_lookup()
 
-    if args.whatweb:
-        whatweb_scan(args.target)
+        if args.whatweb:
+            whatweb_scan(args.target)
 
-    if args.spiderfoot:
-        spiderfoot()
+        if args.spiderfoot:
+            spiderfoot()
 
-    if args.foca:
-        foca()
+        if args.foca:
+            foca()
 
-    if args.google_dorking:
-        google_dorking()
+        if args.google_dorking:
+            google_dorking()
 
-    if args.exiftool:
-        exiftool_scan(args.target)
+        if args.exiftool:
+            exiftool_scan(args.target)
 
-    if args.sublist3r:
-        sublist3r_scan(args.target)
+        if args.sublist3r:
+            sublist3r_scan(args.target)
 
-    if args.amass:
-        amass_enum(args.target)
+        if args.amass:
+            amass_enum(args.target)
+
+    except KeyboardInterrupt:
+        logging.info("Process interrupted by user. Exiting...")
+        sys.exit(0)   
 
 if __name__ == "__main__":
     main()

@@ -255,3 +255,18 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+'''
+
+Key Points:
+Shodan Integration: The shodan_search function uses the Shodan API to get information about the target. Replace "6NqA14sMLc3L3D1OQlWZCEzrsSN0QTWV" with your own API key.
+VirusTotal Integration: The virustotal_scan function uses the VirusTotal API to scan files or URLs. Ensure you replace "API quota allowances for your user" with your actual API key.
+Error Handling: Added basic error handling for KeyboardInterrupt and various other potential exceptions.
+Argument Parsing: The parse_arguments function has been updated to include options for Shodan and VirusTotal.
+
+
+'''
